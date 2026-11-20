@@ -1,0 +1,16 @@
+# Binaries and build output
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Local runtime state, secrets, and logs
+config.json
+secret.key
+crash-freeze.log
+templates/
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
