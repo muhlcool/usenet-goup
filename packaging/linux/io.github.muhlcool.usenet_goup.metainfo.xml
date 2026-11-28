@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.muhlcool.usenet_goup</id>
+  <name>Usenet GoUp</name>
+  <summary>Pack, protect and upload files to Usenet with NZB output</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.muhlcool">
+    <name>MuhlCool</name>
+  </developer>
+  <description>
+    <p>Usenet GoUp packs files (RAR5, 7-Zip or native splitting) or uploads them unchanged, creates PAR2 recovery files, uploads over NNTP with yEnc and writes an NZB plus a BBCode posting template.</p>
+    <p>It runs locally and is operated through a web interface that only listens on this computer.</p>
+  </description>
+  <launchable type="desktop-id">io.github.muhlcool.usenet_goup.desktop</launchable>
+  <url type="homepage">https://github.com/muhlcool/usenet-goup</url>
+  <url type="bugtracker">https://github.com/muhlcool/usenet-goup/issues</url>
+  <categories>
+    <category>Network</category>
+    <category>FileTransfer</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.38.0" date="2026-11-28"/>
+  </releases>
+</component>

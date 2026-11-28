@@ -1,0 +1,190 @@
+# Komplettes Release automatisch: Sobald ein Tag wie v1.38.0 gepusht wird, prüft GitHub den
+# Code, legt einen Release-ENTWURF an (Text aus .github/release-notes/<tag>.md) und hängt alle
+# Programmdateien, AppImages und je eine .sha256-Datei an. Veröffentlicht wird von Hand per
+# "Publish release" im Entwurf, erst dann ist das Release öffentlich sichtbar.
+#
+# Härtung: Actions an Commit-Hashes gepinnt, appimagetool in fester Version mit Prüfsumme,
+# Schreibrecht nur in den Jobs, Token nicht im Checkout gespeichert, Tag-Format geprüft.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Vorhandener Tag, z. B. v1.38.0 (baut die Dateien neu und hängt sie an)"
+        required: true
+
+permissions: {}
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Tag prüfen
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Ungültiger Tag: $TAG" >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+
+      - name: Versionsnummer im Code passt zum Tag
+        run: |
+          grep -q "var version = \"${TAG}\"" main.go || { echo "main.go hat nicht version = \"${TAG}\"" >&2; exit 1; }
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Prüfen und testen
+        run: |
+          test -z "$(gofmt -l .)" || { gofmt -l .; echo "Code nicht formatiert" >&2; exit 1; }
+          go vet ./...
+          go test -race ./...
+
+      - name: Release-Entwurf anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG existiert bereits, Dateien werden ergänzt."
+            exit 0
+          fi
+          NOTES=".github/release-notes/${TAG}.md"
+          if [ ! -f "$NOTES" ]; then
+            NOTES="$RUNNER_TEMP/notes.md"
+            echo "Usenet GoUp ${TAG}" > "$NOTES"
+          fi
+          gh release create "$TAG" --draft --verify-tag --title "Usenet GoUp ${TAG}" --notes-file "$NOTES"
+
+  binaries:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Bauen (Windows, Linux, macOS)
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p dist
+          # GOOS GOARCH Dateiname-Suffix
+          while read -r os arch suffix; do
+            out="dist/Usenet_GoUp-${TAG}-${suffix}"
+            flags="-s -w -X main.version=${TAG}"
+            if [ "$os" = "windows" ]; then flags="$flags -H=windowsgui"; fi
+            echo "Baue $out"
+            GOOS=$os GOARCH=$arch go build -trimpath -ldflags="$flags" -o "$out" .
+            go version -m "$out" | grep -q "GOOS=$os" || { echo "falsches Ziel in $out" >&2; exit 1; }
+          done <<'EOF'
+          windows amd64 windows-x86_64.exe
+          linux amd64 linux-x86_64
+          linux arm64 linux-aarch64
+          darwin amd64 macos-x86_64
+          darwin arm64 macos-arm64
+          EOF
+          cd dist
+          for f in Usenet_GoUp-*; do sha256sum "$f" > "$f.sha256"; done
+          ls -l
+
+      - name: An Release-Entwurf anhängen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$TAG" dist/* --clobber
+
+  appimage:
+    needs: prepare
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            goarch: amd64
+            arch: x86_64
+            tool_sha256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+          - runner: ubuntu-24.04-arm
+            goarch: arm64
+            arch: aarch64
+            tool_sha256: f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158
+    runs-on: ${{ matrix.runner }}
+    env:
+      APPIMAGETOOL_VERSION: "1.9.1"
+      APP_ID: io.github.muhlcool.usenet_goup
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -trimpath -ldflags="-s -w -X main.version=${TAG}" -o usenet-goup .
+
+      - name: AppDir
+        run: |
+          mkdir -p AppDir/usr/bin AppDir/usr/share/metainfo AppDir/usr/share/applications
+          install -m 0755 usenet-goup AppDir/usr/bin/usenet-goup
+          cp "packaging/linux/${APP_ID}.desktop" AppDir/
+          cp "packaging/linux/${APP_ID}.desktop" AppDir/usr/share/applications/
+          cp "packaging/linux/${APP_ID}.metainfo.xml" AppDir/usr/share/metainfo/
+          cp assets/icon-256.png AppDir/usenet-goup.png
+          ln -s usr/bin/usenet-goup AppDir/AppRun
+
+      - name: AppImage
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq desktop-file-utils appstream
+          desktop-file-validate "AppDir/${APP_ID}.desktop"
+          appstreamcli validate-tree --no-net AppDir
+          curl -fsSL -o appimagetool "https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-${{ matrix.arch }}.AppImage"
+          echo "${{ matrix.tool_sha256 }}  appimagetool" | sha256sum -c -
+          chmod +x appimagetool
+          OUT="Usenet_GoUp-${TAG}-${{ matrix.arch }}.AppImage"
+          ARCH=${{ matrix.arch }} ./appimagetool --appimage-extract-and-run AppDir "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+
+      - name: Smoke-Test
+        run: |
+          chmod +x "$OUT"
+          ./"$OUT" --appimage-extract >/dev/null
+          test -x squashfs-root/usr/bin/usenet-goup
+          go version -m squashfs-root/usr/bin/usenet-goup | grep -q "GOARCH=${{ matrix.goarch }}"
+
+      - name: An Release-Entwurf anhängen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber

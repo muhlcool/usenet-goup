@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Usenet GoUp
+Comment=Pack, PAR2 and upload files to Usenet with NZB output
+Exec=usenet-goup
+Icon=usenet-goup
+Terminal=false
+Categories=Network;FileTransfer;

@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usenet GoUp</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --go-cyan: #00add8;
+            --border: #334155;
+            --success: #10b981;
+            --success-hover: #059669;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); margin: 0; padding: 2rem; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 980px; display: flex; flex-direction: column; gap: 1.25rem; }
+        .top-bar { display: flex; align-items: center; justify-content: space-between; }
+        .brand { display: flex; align-items: center; gap: 0.75rem; }
+        .brand-logo { width: 34px; height: 34px; flex-shrink: 0; }
+        h1 { margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.65rem; letter-spacing: -0.01em; }
+        h2 { margin: 0 0 1rem 0; font-size: 1.05rem; color: #e2e8f0; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        .badge { background: rgba(0, 173, 216, 0.16); color: #38bdf8; border: 1px solid rgba(0, 173, 216, 0.4); font-size: 0.74rem; padding: 0.18rem 0.55rem; border-radius: 999px; font-weight: 600; }
+        .btn-quit { background: rgba(239, 68, 68, 0.14); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.45); padding: 0.45rem 0.95rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .btn-quit:hover { background: var(--danger); color: white; border-color: var(--danger); }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.4rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .grid-4 { display: grid; grid-template-columns: 1.2fr 0.8fr 1.2fr 0.8fr; gap: 0.85rem; }
+        label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.35rem; }
+        input, select { width: 100%; padding: 0.6rem; background: var(--bg); border: 1px solid var(--border); border-radius: 0.5rem; color: var(--text); font-size: 0.92rem; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); }
+        input:disabled, select:disabled { opacity: 0.45; background: #1e293b !important; color: #64748b !important; border-color: #334155 !important; cursor: not-allowed; }
+        .input-group { display: flex; gap: 0.4rem; }
+        .input-group input { flex: 1; }
+        .btn-icon { background: #334155; color: var(--text); border: 1px solid var(--border); padding: 0 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 500; cursor: pointer; white-space: nowrap; flex: 0 0 auto; margin: 0; }
+        .btn-icon:hover { background: #475569; }
+        .checkbox-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; }
+        .checkbox-row input { width: auto; }
+        .btn-row { display: flex; gap: 0.85rem; margin-top: 1.2rem; }
+        button.primary { background: var(--accent); color: white; border: none; padding: 0.8rem 1.2rem; border-radius: 0.5rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; flex: 1; transition: background 0.2s; }
+        button.primary:hover { background: var(--accent-hover); }
+        button.primary.cached { background: var(--success); }
+        button.primary.cached:hover { background: var(--success-hover); }
+        button.secondary { background: #334155; color: white; border: none; padding: 0.8rem 1.2rem; border-radius: 0.5rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; flex: 0 0 auto; }
+        button.secondary:hover { background: #475569; }
+        button.danger-outline { background: transparent; color: #fca5a5; border: 1px solid var(--danger); padding: 0.8rem 1rem; border-radius: 0.5rem; font-size: 0.88rem; font-weight: 600; cursor: pointer; flex: 0 0 auto; display: none; }
+        button.danger-outline:hover { background: rgba(239, 68, 68, 0.15); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .terminal { background: #020617; border: 1px solid var(--border); border-radius: 0.5rem; padding: 1rem; height: 260px; overflow-y: auto; font-family: "Fira Code", Consolas, monospace; font-size: 0.83rem; line-height: 1.5; color: #38bdf8; contain: content; }
+        .log-line { margin: 0; border-bottom: 1px solid #0f172a; padding: 2px 0; }
+        .sub-box { background: #162032; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.85rem; }
+        .port-hint { font-size: 0.75rem; margin-top: 0.3rem; color: var(--success); }
+        .test-status { font-size: 0.82rem; margin-top: 0.65rem; padding: 0.55rem 0.8rem; border-radius: 0.45rem; display: none; }
+        .test-ok { background: rgba(16, 185, 129, 0.14); border: 1px solid var(--success); color: #6ee7b7; }
+        .test-warn { background: rgba(245, 158, 11, 0.14); border: 1px solid var(--warn); color: #fcd34d; }
+        .test-err { background: rgba(239, 68, 68, 0.14); border: 1px solid var(--danger); color: #fca5a5; }
+        .telemetry-box { background: #0b1220; border: 1px solid var(--border); border-radius: 0.6rem; padding: 0.9rem 1.1rem; margin-bottom: 0.9rem; contain: content; }
+        .phase-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+        .phase-pill { font-size: 0.78rem; font-weight: 600; color: #38bdf8; letter-spacing: 0.02em; }
+        .phase-pill.active { color: #10b981; }
+        .telemetry-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 0.65rem; }
+        .metric-label { font-size: 0.74rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .metric-val { font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
+        .metric-sub { font-size: 0.75rem; color: #38bdf8; }
+        .progress-track { width: 100%; height: 9px; background: #1e293b; border-radius: 999px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00add8, #10b981); }
+        .setup-banner { background: rgba(245, 158, 11, 0.12); border: 1px solid var(--warn); border-radius: 0.75rem; padding: 1.1rem 1.3rem; display: none; }
+        .setup-banner h3 { margin: 0 0 0.45rem 0; font-size: 0.98rem; color: #fcd34d; }
+        .setup-banner p { margin: 0 0 0.6rem 0; font-size: 0.84rem; color: #e2e8f0; line-height: 1.45; }
+        .setup-list { margin: 0; padding-left: 1.2rem; font-size: 0.83rem; color: #cbd5e1; line-height: 1.6; }
+        .setup-list a { color: #38bdf8; text-decoration: none; font-weight: 600; }
+        .setup-list a:hover { text-decoration: underline; }
+        .field-row { display: flex; gap: 0.9rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .field-row > div { flex: 1 1 160px; min-width: 0; }
+        .is-hidden { display: none !important; }
+        .mode-switch { display: flex; border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden; margin-bottom: 0.4rem; }
+        .mode-switch button { flex: 1; background: transparent; color: var(--muted); border: none; padding: 0.65rem 1rem; font-size: 0.92rem; font-weight: 600; cursor: pointer; }
+        .mode-switch button + button { border-left: 1px solid var(--border); }
+        .mode-switch button.active { background: rgba(0, 173, 216, 0.16); color: #38bdf8; }
+        .mode-hint { font-size: 0.78rem; color: var(--muted); margin: 0 0 1rem; }
+        .engine-note { font-size: 0.75rem; color: #f59e0b; margin-top: 0.35rem; display: none; }
+        .shutdown-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 0.75rem; z-index: 999; text-align: center; padding: 2rem; }
+    </style>
+</head>
+<body>
+    <div id="shutdownOverlay" class="shutdown-overlay">
+        <h2 id="shutdownTitle" style="border:none; font-size:1.35rem; margin:0;">Usenet GoUp wurde sauber beendet</h2>
+        <p id="shutdownText" style="color:var(--muted); margin:0;">Temporäre Dateien wurden aufgeräumt und der Hintergrundprozess beendet. Du kannst dieses Browser-Tab jetzt schließen.</p>
+    </div>
+
+    <div class="container">
+        <div class="top-bar">
+            <div class="brand">
+                <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="2" width="60" height="60" rx="14" fill="#1e293b" stroke="#334155" stroke-width="2.5"/>
+                    <path d="M32 13 L49 30 L42.5 36.5 L32 26 L21.5 36.5 L15 30 Z" fill="#00ADD8"/>
+                    <rect x="28" y="22" width="8" height="28" rx="2" fill="#3b82f6"/>
+                    <rect x="17" y="35" width="6.5" height="15" rx="2" fill="#10b981"/>
+                    <rect x="40.5" y="35" width="6.5" height="15" rx="2" fill="#10b981"/>
+                </svg>
+                <h1>Usenet GoUp <span class="badge" id="appVersion">v1.38.0</span></h1>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.65rem;">
+                <select id="appLang" class="autosave" onchange="applyLanguage(this.value)" title="Sprache für Oberfläche, Log und Vorlage" style="width:auto; padding:0.42rem 0.65rem; font-size:0.82rem; border-radius:0.5rem; background:#0f172a; color:#f8fafc; border:1px solid #334155; cursor:pointer;">
+                    <option value="de">DE (Deutsch)</option>
+                    <option value="en">EN (English)</option>
+                </select>
+                <button type="button" id="quitBtn" class="btn-quit" onclick="shutdownApp()" title="Temp-Ordner aufräumen und Hintergrundserver sauber beenden">Beenden</button>
+            </div>
+        </div>
+
+        <div id="setupBanner" class="setup-banner">
+            <h3 id="setupTitle">Erstinstallation: Empfohlene Hilfsprogramme fehlen noch</h3>
+            <p id="setupIntro"></p>
+            <ul class="setup-list" id="setupList"></ul>
+        </div>
+
+        <div class="card">
+            <h2>1. Newsserver & Verbindung (NNTP)</h2>
+            <div class="grid-3">
+                <div>
+                    <label for="host">NNTP Host</label>
+                    <input type="text" id="host" class="autosave" placeholder="news.provider.tld">
+                </div>
+                <div>
+                    <label for="port">Port (563 / 443 = SSL, 119 = Klartext)</label>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="port" class="autosave" value="563" oninput="updatePortHint()">
+                    <div class="port-hint" id="portHint">Automatisch: SSL/TLS aktiv</div>
+                </div>
+                <div>
+                    <label for="connections">Parallele Verbindungen</label>
+                    <input type="number" id="connections" class="autosave" value="40" min="1" max="60">
+                </div>
+            </div>
+            <div class="grid-3" style="margin-top: 0.9rem;">
+                <div>
+                    <label for="username">Benutzername</label>
+                    <input type="text" id="username" class="autosave" autocomplete="off">
+                </div>
+                <div>
+                    <label for="passwordServer">Passwort (AES-256 verschlüsselt)</label>
+                    <input type="password" id="passwordServer" class="autosave" autocomplete="off">
+                </div>
+                <div>
+                    <label for="newsgroup">Ziel-Newsgroups (getrennt per , oder ;)</label>
+                    <input type="text" id="newsgroup" class="autosave" value="alt.binaries.misc" placeholder="alt.binaries.misc, alt.binaries.test">
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top: 0.9rem;">
+                <div>
+                    <div id="posterField" class="is-hidden">
+                        <label for="poster">From / Poster Header</label>
+                        <input type="text" id="poster" class="autosave" value="poster <poster@example.invalid>">
+                    </div>
+                    <div class="checkbox-row" style="margin-top: 0.45rem; margin-bottom: 0;">
+                        <input type="checkbox" id="randomizePoster" class="autosave" checked onchange="togglePosterMode()">
+                        <label for="randomizePoster" style="margin:0; color: var(--text); font-size:0.8rem;">Zufälligen From-Header pro Upload generieren</label>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:flex-end; justify-content: flex-end;">
+                    <button id="testConnBtn" class="secondary" style="padding: 0.6rem 1.1rem; font-size:0.85rem;" onclick="testServerConnection()">Verbindung & Limit testen</button>
+                </div>
+            </div>
+            <div id="testResultBox" class="test-status"></div>
+        </div>
+
+        <div class="card">
+            <h2>2. Datei-Paketierung & Upload</h2>
+            <div class="grid-3" style="margin-bottom: 0.9rem;">
+                <div>
+                    <label for="sourcePath">Quellpfad (Einzeldatei oder Ordner)</label>
+                    <div class="input-group">
+                        <input type="text" id="sourcePath" class="pack-param" oninput="resetPreviousResultBanner(); autoSelectTemplateFromPath()" onchange="autoSelectTemplateFromPath()" placeholder="Pfad wählen...">
+                        <button type="button" id="btnBrowseFile" class="btn-icon" onclick="browseNative('file', this)" title="Einzelne Datei auswählen">Datei...</button>
+                        <button type="button" id="btnBrowseFolder" class="btn-icon" onclick="browseNative('folder', this)" title="Ganzen Ordner auswählen">Ordner...</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="nfoPath">NFO-Datei (Optional)</label>
+                    <div class="input-group">
+                        <input type="text" id="nfoPath" placeholder="Auto-Erkennung aus Quellordner">
+                        <button type="button" id="btnBrowseNfo" class="btn-icon" onclick="browseNative('nfo', this)" title="NFO-Datei manuell auswählen">NFO...</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="nzbOutDir">Ausgabeordner für .nzb & .txt</label>
+                    <div class="input-group">
+                        <input type="text" id="nzbOutDir" class="autosave" placeholder="Leer = gleicher Ordner wie Quelle">
+                        <button type="button" id="btnBrowseNzbDir" class="btn-icon" onclick="browseNative('nzbdir', this)" title="Zielordner für NZB & TXT wählen">Ordner...</button>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" id="uploadMode" value="pack">
+            <div class="mode-switch" role="group" aria-label="Modus">
+                <button type="button" id="modePack" class="active" aria-pressed="true" onclick="setUploadMode('pack')">Packen und hochladen</button>
+                <button type="button" id="modeDirect" aria-pressed="false" onclick="setUploadMode('direct')">Nur hochladen (1:1)</button>
+            </div>
+            <p class="mode-hint" id="modeHint"></p>
+
+
+            <div class="checkbox-row is-hidden" id="par2Row">
+                <input type="checkbox" id="par2Enabled" class="autosave pack-param" checked onchange="updateModeUI()">
+                <label for="par2Enabled" style="margin:0; color: var(--text); font-weight:600;">PAR2-Wiederherstellungsdateien erstellen</label>
+            </div>
+            <div class="field-row">
+                <div id="engineCell">
+                    <label for="engine">Archiv-Engine</label>
+                    <select id="engine" class="autosave pack-param" onchange="toggleEngineMode()"></select>
+                </div>
+                <div id="partCell">
+                    <label for="partSize">Part-Größe (MB)</label>
+                    <input type="number" id="partSize" class="autosave pack-param" value="50" min="5" max="1000">
+                </div>
+                <div id="par2EngCell">
+                    <label for="par2Engine">PAR2-Engine</label>
+                    <select id="par2Engine" class="autosave pack-param"></select>
+                </div>
+                <div id="par2PctCell">
+                    <label for="par2Pct">PAR2 Redundanz (%)</label>
+                    <input type="number" id="par2Pct" class="autosave pack-param" value="10" min="0" max="50">
+                </div>
+            </div>
+
+            <div class="field-row">
+                <div class="sub-box" id="pwdBox">
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="autoPassword" class="autosave pack-param" checked onchange="togglePasswordMode()">
+                        <label for="autoPassword" style="margin:0; color: var(--text); font-weight:600;">Zufälliges Archiv-Passwort generieren</label>
+                    </div>
+                    <div class="grid-2" style="margin-top: 0.6rem;">
+                        <div>
+                            <label for="archivePassword">Manuelles Passwort</label>
+                            <input type="text" id="archivePassword" class="autosave pack-param" placeholder="Leer = unverschlüsselt" disabled>
+                        </div>
+                        <div>
+                            <label for="passwordLength">Passwort-Länge (Zeichen)</label>
+                            <input type="number" id="passwordLength" class="autosave pack-param" value="24" min="8" max="64">
+                        </div>
+                    </div>
+                    <div class="engine-note" id="nativePwdNote">Natives Go-Splitting unterstützt kein Passwort (bitte RAR5 oder 7-Zip nutzen).</div>
+                </div>
+
+                <div class="sub-box is-hidden" id="existingPwdBox">
+                    <label for="existingPassword">Vorhandenes Archiv-Passwort (optional)</label>
+                    <input type="text" id="existingPassword" autocomplete="off" spellcheck="false" maxlength="128" placeholder="Leer = kein Passwort">
+                    <div class="engine-note" id="existingPwdNote" style="display:block; color:var(--muted);">Für bereits verschlüsselte Archive: landet in der NZB (und in der Vorlage), damit SABnzbd/NZBGet automatisch entpacken. Wird nicht gespeichert.</div>
+                </div>
+
+                <div class="sub-box">
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="obfuscate" class="autosave pack-param" checked onchange="toggleObfuscateMode()">
+                        <label for="obfuscate" style="margin:0; color: var(--text); font-weight:600;">Dateinamen & Subject-Header verschleiern</label>
+                    </div>
+                    <div style="margin-top: 0.6rem;">
+                        <label for="obfuscationLength">Zufallsnamen- / Header-Länge (Zeichen)</label>
+                        <input type="number" id="obfuscationLength" class="autosave pack-param" value="24" min="8" max="64">
+                    </div>
+                    <div class="engine-note" id="nativeObfNote" style="color:#38bdf8;">PAR2-Rename aktiv: Original-Dateiname & Endung bleiben beim Entpacken erhalten.</div>
+                    <div class="engine-note" id="directObfNote"></div>
+                </div>
+            </div>
+
+            <div class="sub-box" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                <div class="checkbox-row" style="margin:0;">
+                    <input type="checkbox" id="createTemplate" class="autosave" checked onchange="updateTemplateHint(); updateModeUI()">
+                    <label for="createTemplate" style="margin:0; color: var(--text); font-size:0.82rem; font-weight:600;">Posting-Vorlage (.txt) erstellen</label>
+                </div>
+                <div id="templateTypeRow" style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
+                    <label for="templateType" style="margin:0; font-size:0.82rem; color:var(--text); font-weight:600;">Vorlage:</label>
+                    <select id="templateType" class="autosave" onchange="updateTemplateHint()" style="width:auto; padding:0.38rem 0.65rem; font-size:0.82rem; border-radius:0.5rem; background:#0f172a; color:#f8fafc; border:1px solid #334155; cursor:pointer;">
+                        <option value="movies_series">Filme / Serien</option>
+                        <option value="games">Games (PC / Konsole)</option>
+                        <option value="misc">Misc (E-Book, Software, Audio)</option>
+                    </select>
+                    <span id="autoMetaHint" style="font-size:0.76rem; color:var(--muted);"></span>
+                </div>
+                <div class="checkbox-row" id="onlineMetaRow" style="margin:0;">
+                    <input type="checkbox" id="onlineMetadata" class="autosave">
+                    <label for="onlineMetadata" style="margin:0; color: var(--text); font-size:0.8rem;">Cover &amp; Beschreibung online suchen (TMDB, TVMaze, DuckDuckGo)</label>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button id="packOnlyBtn" class="secondary" onclick="startPipeline(true)">Nur lokal verpacken (Dry-Run)</button>
+                <button id="clearCacheBtn" class="danger-outline" onclick="invalidateDryRunCache(true)" title="Gecachtes Dry-Run-Paket löschen und beim nächsten Upload neu verpacken">Cache verwerfen</button>
+                <button id="cancelBtn" class="danger-outline" onclick="cancelPipeline()" title="Laufenden Job abbrechen (Packer/PAR2/Upload werden beendet)">Abbrechen</button>
+                <button id="startBtn" class="primary" onclick="startPipeline(false)">Verpacken, Hochladen & NZB + Vorlage erstellen</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>3. Live-Telemetrie & Protokoll</h2>
+            <div class="telemetry-box">
+                <div id="coverPreviewStrip" style="display:none; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:0.75rem; padding-bottom:0.65rem; border-bottom:1px solid #1e293b; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:0.85rem; min-width:0; flex:1;">
+                        <img id="coverPreviewImg" src="" alt="Erkanntes Cover" style="width:48px; height:68px; object-fit:cover; border-radius:0.35rem; border:1px solid var(--border); flex-shrink:0; display:none;">
+                        <div style="min-width:0; flex:1;">
+                            <div id="coverPreviewBadge" style="font-size:0.72rem; color:var(--success); font-weight:600;">ERKANNTES BOARD-COVER</div>
+                            <div id="coverPreviewUrl" style="font-size:0.78rem; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+                        </div>
+                    </div>
+                    <div id="templateCopyBox" style="display:none; align-items:center; gap:0.5rem; flex-shrink:0;">
+                        <button type="button" id="copyTemplateBtn" class="primary" onclick="copyPostingTemplate()" style="padding:0.45rem 0.85rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.4rem;">
+                            <span id="copyTemplateBtnText">Posting-Vorlage kopieren</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="postingTemplatePanel" style="display:none; margin-bottom:0.75rem;">
+                    <textarea id="postingTemplateArea" readonly rows="8" onclick="this.select()" style="width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:0.78rem; line-height:1.45; background:#090d16; color:#e2e8f0; border:1px solid #334155; border-radius:0.5rem; padding:0.65rem 0.75rem; resize:vertical;"></textarea>
+                </div>
+                <div class="phase-bar">
+                    <span class="phase-pill" id="phaseLabel">Bereit</span>
+                    <span class="metric-sub" id="phasePctHeader">0.0 %</span>
+                </div>
+                <div class="telemetry-grid">
+                    <div>
+                        <div class="metric-label" id="lblCol1">Brutto-Rate (Leitung)</div>
+                        <div class="metric-val" id="mBrutto">0.00 MB/s</div>
+                        <div class="metric-sub" id="mMbits">0 Mbit/s (inkl. yEnc)</div>
+                    </div>
+                    <div>
+                        <div class="metric-label" id="lblCol2">Netto-Rate (Datei)</div>
+                        <div class="metric-val" id="mNetto">0.00 MB/s</div>
+                        <div class="metric-sub" id="subCol2">Reine Nutzdaten</div>
+                    </div>
+                    <div>
+                        <div class="metric-label" id="lblCol3">Segmente</div>
+                        <div class="metric-val" id="mSegs">0 / 0</div>
+                        <div class="metric-sub" id="mPct">0.0 %</div>
+                    </div>
+                    <div>
+                        <div class="metric-label" id="lblCol4">Übertragen</div>
+                        <div class="metric-val" id="mData">0.0 MB</div>
+                        <div class="metric-sub" id="mTotalData">von 0.0 MB</div>
+                    </div>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressBar"></div>
+                </div>
+            </div>
+
+            <div class="terminal" id="logs">
+                <p class="log-line" id="initialLogLine">System bereit.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+                (function() {
+            const origFetch = window.fetch.bind(window);
+            window.fetch = function(input, init) {
+                const url = (typeof input === 'string') ? input : (input && input.url) || '';
+                if (url.startsWith('/api/')) {
+                    const m = document.cookie.match(/(?:^|;\s*)ug_session=([^;]+)/);
+                    const tok = m ? decodeURIComponent(m[1]) : '';
+                    const opts = Object.assign({}, init || {});
+                    const hdrs = new Headers(opts.headers || {});
+                    if (tok && !hdrs.has('X-UG-Token')) hdrs.set('X-UG-Token', tok);
+                    opts.headers = hdrs;
+                    return origFetch(input, opts);
+                }
+                return origFetch(input, init);
+            };
+        })();
+
+        const MAX_LOG_LINES = 300;
+        const logsEl = document.getElementById('logs');
+        let pendingLogs = [];
+        let logFlushScheduled = false;
+
+        function reportClientDiag(kind, detail) {
+            fetch('/api/diagnostics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ kind: kind, detail: String(detail) }),
+                keepalive: true
+            }).catch(() => {});
+        }
+
+        window.addEventListener('error', (ev) => {
+            reportClientDiag('JS-ERROR', `${ev.message} (${ev.filename}:${ev.lineno})`);
+        });
+        window.addEventListener('unhandledrejection', (ev) => {
+            reportClientDiag('PROMISE-ERROR', ev.reason ? (ev.reason.stack || ev.reason.message || ev.reason) : 'unhandled rejection');
+        });
+
+        let lastFrameTime = performance.now();
+        function watchMainThreadStall(now) {
+            const delta = now - lastFrameTime;
+            if (delta > 1500) {
+                reportClientDiag('BROWSER-STALL', `Main-Thread-Verzögerung: ${(delta / 1000).toFixed(2)}s`);
+            }
+            lastFrameTime = now;
+            requestAnimationFrame(watchMainThreadStall);
+        }
+        requestAnimationFrame(watchMainThreadStall);
+
+        function flushLogs() {
+            logFlushScheduled = false;
+            if (pendingLogs.length === 0) return;
+
+            const frag = document.createDocumentFragment();
+            for (let i = 0; i < pendingLogs.length; i++) {
+                const p = document.createElement('p');
+                p.className = 'log-line';
+                p.textContent = pendingLogs[i];
+                frag.appendChild(p);
+            }
+            pendingLogs = [];
+            logsEl.appendChild(frag);
+
+            while (logsEl.childElementCount > MAX_LOG_LINES) {
+                logsEl.removeChild(logsEl.firstElementChild);
+            }
+            logsEl.scrollTop = logsEl.scrollHeight;
+        }
+
+        // appendLog(de, en): Meldung in beiden Sprachen, gezeigt wird die gewählte.
+        function appendLog(de, en) {
+            const isEn = (getValIfExists('appLang', 'de') === 'en');
+            const time = new Date().toLocaleTimeString();
+            const outMsg = (isEn && en) ? en : de;
+            pendingLogs.push(`[${time}] ${outMsg}`);
+            if (pendingLogs.length > MAX_LOG_LINES) {
+                pendingLogs = pendingLogs.slice(-MAX_LOG_LINES);
+            }
+            if (!logFlushScheduled) {
+                logFlushScheduled = true;
+                requestAnimationFrame(flushLogs);
+            }
+        }
+
+        let latestProgress = null;
+        let progressFlushScheduled = false;
+        let lastPhase = '';
+        let lastLangPhase = '';
+
+        function renderProgressFrame() {
+            progressFlushScheduled = false;
+            const s = latestProgress;
+            if (!s) return;
+            const isEn = (getValIfExists('appLang', 'de') === 'en');
+
+            const phaseEl = document.getElementById('phaseLabel');
+            phaseEl.textContent = (isEn ? s.phaseLabelEn : s.phaseLabel) || (isEn ? 'Active' : 'Aktiv');
+            phaseEl.className = s.active ? 'phase-pill active' : 'phase-pill';
+            document.getElementById('phasePctHeader').textContent = `${s.percent.toFixed(1)} %`;
+
+            if (s.phase !== lastPhase || lastLangPhase !== (isEn ? 'en' : 'de')) {
+                lastPhase = s.phase;
+                lastLangPhase = isEn ? 'en' : 'de';
+                if (s.phase === 'pack') {
+                    document.getElementById('lblCol1').textContent = isEn ? 'Pack Speed' : 'Pack-Geschwindigkeit';
+                    document.getElementById('mMbits').textContent = isEn ? 'Disk Throughput' : 'Festplatten-Durchsatz';
+                    document.getElementById('lblCol2').textContent = isEn ? 'Progress' : 'Fortschritt';
+                    document.getElementById('subCol2').textContent = isEn ? 'Archive Creation' : 'Archiv-Erstellung';
+                    document.getElementById('lblCol3').textContent = isEn ? 'Archive Parts' : 'Archiv-Parts';
+                    document.getElementById('mPct').textContent = isEn ? 'Created Parts' : 'Erzeugte Teile';
+                    document.getElementById('lblCol4').textContent = isEn ? 'Packed' : 'Verpackt';
+                } else if (s.phase === 'par2') {
+                    document.getElementById('lblCol1').textContent = isEn ? 'PAR2 Compute Rate' : 'PAR2-Rechenleistung';
+                    document.getElementById('mMbits').textContent = isEn ? 'ParPar / PAR2 Throughput' : 'ParPar / PAR2 Durchsatz';
+                    document.getElementById('lblCol2').textContent = isEn ? 'Progress' : 'Fortschritt';
+                    document.getElementById('subCol2').textContent = isEn ? 'Redundancy Calculation' : 'Redundanz-Berechnung';
+                    document.getElementById('lblCol3').textContent = isEn ? 'PAR2 Files' : 'PAR2-Dateien';
+                    document.getElementById('mPct').textContent = isEn ? 'Recovery Volumes' : 'Reparatur-Volumes';
+                    document.getElementById('lblCol4').textContent = isEn ? 'PAR2 Size' : 'PAR2-Größe';
+                } else {
+                    document.getElementById('lblCol1').textContent = isEn ? 'Gross Rate (Line)' : 'Brutto-Rate (Leitung)';
+                    document.getElementById('lblCol2').textContent = isEn ? 'Net Rate (File)' : 'Netto-Rate (Datei)';
+                    document.getElementById('subCol2').textContent = isEn ? 'Pure payload' : 'Reine Nutzdaten';
+                    document.getElementById('lblCol3').textContent = isEn ? 'Segments' : 'Segmente';
+                    document.getElementById('lblCol4').textContent = isEn ? 'Transferred' : 'Übertragen';
+                }
+            }
+
+            if (s.phase === 'pack') {
+                document.getElementById('mBrutto').textContent = `${s.bruttoMBs.toFixed(1)} MB/s`;
+                document.getElementById('mNetto').textContent = `${s.percent.toFixed(1)} %`;
+                document.getElementById('mSegs').textContent = `${s.completedSegs} / ~${s.totalSegs}`;
+                document.getElementById('mData').textContent = `${s.uploadedNetMB.toFixed(1)} MB`;
+                document.getElementById('mTotalData').textContent = `${isEn ? 'of' : 'von'} ${s.totalNetMB.toFixed(1)} MB`;
+            } else if (s.phase === 'par2') {
+                document.getElementById('mBrutto').textContent = `${s.bruttoMBs.toFixed(1)} MB/s`;
+                document.getElementById('mNetto').textContent = `${s.percent.toFixed(1)} %`;
+                document.getElementById('mSegs').textContent = `${s.completedSegs}`;
+                document.getElementById('mData').textContent = `${s.uploadedNetMB.toFixed(1)} MB`;
+                document.getElementById('mTotalData').textContent = `${isEn ? 'Base' : 'Basis'}: ${s.totalNetMB.toFixed(1)} MB`;
+            } else {
+                document.getElementById('mBrutto').textContent = `${s.bruttoMBs.toFixed(2)} MB/s`;
+                document.getElementById('mMbits').textContent = `${Math.round(s.bruttoMbits)} Mbit/s (${isEn ? 'incl. yEnc' : 'inkl. yEnc'})`;
+                document.getElementById('mNetto').textContent = `${s.nettoMBs.toFixed(2)} MB/s`;
+                document.getElementById('mSegs').textContent = `${s.completedSegs} / ${s.totalSegs}`;
+                document.getElementById('mPct').textContent = `${s.percent.toFixed(1)} %`;
+                document.getElementById('mData').textContent = `${s.uploadedNetMB.toFixed(1)} MB`;
+                document.getElementById('mTotalData').textContent = `${isEn ? 'of' : 'von'} ${s.totalNetMB.toFixed(1)} MB`;
+            }
+
+            document.getElementById('progressBar').style.width = `${Math.min(100, s.percent)}%`;
+        }
+
+        const evtSource = new EventSource('/api/logs');
+        evtSource.onmessage = (e) => {
+            let m = null;
+            try { m = JSON.parse(e.data); } catch (_) {}
+            if (m && typeof m.de === 'string') appendLog(m.de, m.en); else appendLog(e.data);
+        };
+        evtSource.addEventListener('progress', (e) => {
+            try {
+                latestProgress = JSON.parse(e.data);
+                if (!progressFlushScheduled) {
+                    progressFlushScheduled = true;
+                    requestAnimationFrame(renderProgressFrame);
+                }
+            } catch (_) {}
+        });
+
+        function shutdownApp() {
+            try { evtSource.close(); } catch (_) {}
+            const cfg = collectAppConfig();
+            fetch('/api/shutdown', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cfg),
+                keepalive: true
+            }).catch(() => {});
+            document.getElementById('shutdownOverlay').style.display = 'flex';
+            setTimeout(() => { try { window.close(); } catch (_) {} }, 250);
+        }
+
+                function normalizeTemplateVal(raw) {
+            const v = String(raw || '').toLowerCase();
+            if (v === 'games' || v === 'game') return 'games';
+            if (v === 'misc') return 'misc';
+            return 'movies_series';
+        }
+
+        function updateTemplateHint() {
+            const t = normalizeTemplateVal(getValIfExists('templateType', 'movies_series'));
+            const isEN = getValIfExists('appLang', 'de') === 'en';
+            const el = document.getElementById('autoMetaHint');
+            if (!el) return;
+            el.textContent = isEN ? `Editable: templates/${t}.txt` : `Anpassbar: templates/${t}.txt`;
+            // Ohne Vorlage braucht es weder Vorlagen-Auswahl noch MediaInfo oder Online-Metadaten.
+            const withTpl = document.getElementById('createTemplate')?.checked !== false;
+            document.getElementById('templateTypeRow')?.classList.toggle('is-hidden', !withTpl);
+            const row = document.getElementById('onlineMetaRow');
+            if (row) row.classList.toggle('is-hidden', !withTpl || t !== 'movies_series');
+        }
+
+        let hasValidDryRun = false;
+        let dryRunFileCount = 0;
+
+        function setDryRunButtonState(ready, fileCount) {
+            hasValidDryRun = ready;
+            dryRunFileCount = fileCount || 0;
+            const startBtn = document.getElementById('startBtn');
+            const clearBtn = document.getElementById('clearCacheBtn');
+            startBtn.classList.toggle('cached', !!ready);
+            clearBtn.style.display = ready ? 'inline-block' : 'none';
+            updateModeUI();
+        }
+
+        function currentUploadMode() {
+            return getValIfExists('uploadMode', 'pack') === 'direct' ? 'direct' : 'pack';
+        }
+
+        function setUploadMode(mode) {
+            const next = mode === 'direct' ? 'direct' : 'pack';
+            if (next === currentUploadMode()) return;
+            setValIfExists('uploadMode', next);
+            invalidateDryRunCache(false);
+            updateModeUI();
+            autoSaveConfig();
+        }
+
+        // updateModeUI: Moduswahl, PAR2-Haken, Hinweise und Buttontexte (DE/EN) an einer Stelle.
+        function updateModeUI() {
+            const isEn = getValIfExists('appLang', 'de') === 'en';
+            const tr = (en, de) => isEn ? en : de;
+            const direct = currentUploadMode() === 'direct';
+            const par2El = document.getElementById('par2Enabled');
+            const par2On = !par2El || par2El.checked;
+            const directMode = currentUploadMode() === 'direct';
+            const byId = (id) => document.getElementById(id);
+
+            for (const [id, on] of [['modePack', !direct], ['modeDirect', direct]]) {
+                const b = byId(id);
+                if (!b) continue;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            }
+            const setT = (id, txt) => { const el = byId(id); if (el) el.textContent = txt; };
+            setT('modePack', tr('Pack and upload', 'Packen und hochladen'));
+            setT('modeDirect', tr('Upload only (1:1)', 'Nur hochladen (1:1)'));
+            setT('modeHint', direct
+                ? tr('Files are uploaded unchanged, any extension. For a folder, all files directly inside it are uploaded. Nothing is packed or split.',
+                     'Dateien gehen unverändert raus, jede Endung. Bei einem Ordner alle Dateien direkt darin. Nichts wird gepackt oder gesplittet.')
+                : tr('Files are packed as RAR, 7z or split into parts before upload.',
+                     'Dateien werden vor dem Upload als RAR, 7z oder in Teile gesplittet verpackt.'));
+
+            // Nicht passende Felder ausblenden statt ausgrauen. PAR2 lässt sich nur bei "Nur hochladen" abschalten.
+            const show = (id, on) => { const el = byId(id); if (el) el.classList.toggle('is-hidden', !on); };
+            const par2Active = !direct || par2On;
+            show('engineCell', !direct);
+            show('partCell', !direct);
+            show('pwdBox', !direct);
+            show('existingPwdBox', direct);
+            show('par2Row', direct);
+            show('par2EngCell', par2Active);
+            show('par2PctCell', par2Active);
+            for (const id of ['par2Engine', 'par2Pct']) { const el = byId(id); if (el) el.disabled = false; }
+            if (!direct) applyEngineState();
+
+            const obf = byId('obfuscate') && byId('obfuscate').checked;
+            const dNote = byId('directObfNote');
+            if (dNote) {
+                dNote.style.display = (direct && obf) ? 'block' : 'none';
+                dNote.style.color = par2On ? '#38bdf8' : '#f59e0b';
+                dNote.textContent = par2On
+                    ? tr('Filenames are uploaded under random names; PAR2 restores the originals. Your files stay unchanged.',
+                         'Dateinamen gehen unter Zufallsnamen raus, PAR2 stellt die Originale wieder her. Deine Dateien bleiben unverändert.')
+                    : tr('Without PAR2 only the subject headers are obfuscated, filenames stay original (otherwise they could not be restored).',
+                         'Ohne PAR2 werden nur die Subject-Header verschleiert, die Dateinamen bleiben original (sonst wären sie nicht wiederherstellbar).');
+            }
+            if (direct && byId('nativeObfNote')) byId('nativeObfNote').style.display = 'none';
+
+            const packBtn = byId('packOnlyBtn');
+            if (packBtn) {
+                packBtn.style.display = (directMode && !par2On) ? 'none' : '';
+                packBtn.textContent = direct
+                    ? tr('Create PAR2 only (Dry-Run)', 'Nur PAR2 erstellen (Dry-Run)')
+                    : tr('Pack Locally Only (Dry-Run)', 'Nur lokal verpacken (Dry-Run)');
+            }
+            const startBtn = byId('startBtn');
+            if (startBtn) {
+                if (hasValidDryRun) {
+                    startBtn.textContent = tr(`Upload prepared files & create NZB (${dryRunFileCount} files ready)`,
+                                              `Vorbereitete Dateien hochladen & NZB erstellen (${dryRunFileCount} Dateien bereit)`);
+                } else {
+                    const tpl = byId('createTemplate')?.checked !== false;
+                    const what = tpl ? tr('NZB + Template', 'NZB + Vorlage') : 'NZB';
+                    startBtn.textContent = direct
+                        ? tr(`Upload & Create ${what}`, `Hochladen & ${what} erstellen`)
+                        : tr(`Pack, Upload & Create ${what}`, `Verpacken, Hochladen & ${what} erstellen`);
+                }
+            }
+            const outLbl = document.querySelector('label[for="nzbOutDir"]');
+            if (outLbl) {
+                const tpl = byId('createTemplate')?.checked !== false;
+                outLbl.textContent = tpl ? tr('Output Folder for .nzb & .txt', 'Ausgabeordner für .nzb & .txt')
+                                         : tr('Output Folder for .nzb', 'Ausgabeordner für .nzb');
+            }
+        }
+
+        async function invalidateDryRunCache(manual) {
+            if (!hasValidDryRun) return;
+            setDryRunButtonState(false, 0);
+            try {
+                await fetch('/api/cache/clear', { method: 'POST' });
+                if (manual) appendLog('Dry-Run-Cache verworfen, der nächste Upload verpackt neu.', 'Dry-run cache discarded, the next upload packs again.');
+            } catch (_) {}
+        }
+
+        function updatePortHint() {
+            const raw = document.getElementById('port').value.replace(/\D/g, '');
+            if (document.getElementById('port').value !== raw) {
+                document.getElementById('port').value = raw;
+            }
+            const port = parseInt(raw, 10) || 563;
+            const hint = document.getElementById('portHint');
+            const en = getValIfExists('appLang', 'de') === 'en';
+            if ([119, 80, 23].includes(port)) {
+                hint.textContent = en ? 'Automatic: unencrypted (plain text)' : 'Automatisch: Unverschlüsselt (Klartext)';
+                hint.style.color = '#f59e0b';
+            } else {
+                hint.textContent = en ? 'Automatic: SSL/TLS active' : 'Automatisch: SSL/TLS aktiv';
+                hint.style.color = '#10b981';
+            }
+        }
+
+        function togglePosterMode() {
+            const chk = document.getElementById('randomizePoster');
+            const inp = document.getElementById('poster');
+            if (!chk || !inp) return;
+            inp.disabled = false;
+            const field = document.getElementById('posterField');
+            if (field) field.classList.toggle('is-hidden', !!chk.checked);
+        }
+
+        function toggleEngineMode() {
+            applyEngineState();
+            updateModeUI();
+        }
+
+        function applyEngineState() {
+            const isNative = document.getElementById('engine').value === 'native';
+            const autoChk = document.getElementById('autoPassword');
+            const pwdInput = document.getElementById('archivePassword');
+            const lenInput = document.getElementById('passwordLength');
+            const pwdNote = document.getElementById('nativePwdNote');
+            const obfNote = document.getElementById('nativeObfNote');
+
+            if (isNative) {
+                autoChk.disabled = true;
+                pwdInput.disabled = true;
+                lenInput.disabled = true;
+                pwdNote.style.display = 'block';
+                obfNote.style.display = document.getElementById('obfuscate').checked ? 'block' : 'none';
+            } else {
+                autoChk.disabled = false;
+                pwdNote.style.display = 'none';
+                obfNote.style.display = 'none';
+                togglePasswordMode();
+            }
+        }
+
+        function togglePasswordMode() {
+            if (document.getElementById('engine').value === 'native' || currentUploadMode() === 'direct') return;
+            const auto = document.getElementById('autoPassword').checked;
+            document.getElementById('archivePassword').disabled = auto;
+            document.getElementById('passwordLength').disabled = !auto;
+            if (auto) document.getElementById('archivePassword').value = '';
+        }
+
+        function toggleObfuscateMode() {
+            const obf = document.getElementById('obfuscate').checked;
+            document.getElementById('obfuscationLength').disabled = !obf;
+            const isNative = document.getElementById('engine').value === 'native';
+            document.getElementById('nativeObfNote').style.display = (isNative && obf) ? 'block' : 'none';
+            updateModeUI();
+        }
+
+        function setValIfExists(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+        }
+        function getValIfExists(id, fallback = '') {
+            const el = document.getElementById(id);
+            return el ? el.value : fallback;
+        }
+
+
+
+        function resetPreviousResultBanner() {
+            window.__lastPostingTemplate = '';
+            const strip = document.getElementById('coverPreviewStrip');
+            const img = document.getElementById('coverPreviewImg');
+            const urlTxt = document.getElementById('coverPreviewUrl');
+            const copyBox = document.getElementById('templateCopyBox');
+            const tplPanel = document.getElementById('postingTemplatePanel');
+            const tplArea = document.getElementById('postingTemplateArea');
+            if (strip) strip.style.display = 'none';
+            if (img) {
+                img.src = '';
+                img.style.display = 'none';
+            }
+            if (urlTxt) urlTxt.textContent = '';
+            if (copyBox) copyBox.style.display = 'none';
+            if (tplArea) tplArea.value = '';
+            if (tplPanel) tplPanel.style.display = 'none';
+        }
+
+        let lastAutoTemplatePath = '';
+        function autoSelectTemplateFromPath(force = false) {
+            const srcEl = document.getElementById('sourcePath');
+            const tplEl = document.getElementById('templateType');
+            if (!srcEl || !tplEl) return;
+            const raw = (srcEl.value || '').trim();
+            if (!raw) return;
+            if (!force && raw === lastAutoTemplatePath) return;
+
+            const parts = raw.split(/[\\/]/).filter(Boolean);
+            const base = parts[parts.length - 1] || raw;
+            const parentDir = parts.length >= 2 ? parts[parts.length - 2] : '';
+
+            const gameExtRe = /\.(nsp|xci|nsz|pkg|vpk|cia|3ds|nds|gba|rom|chd|cso|wbfs|rvz)$/i;
+            const gameTagRe = /(?:^|[._\s\-\[])(CODEX|PLAZA|SKIDROW|RELOADED|FLT|FAIRLIGHT|RAZOR1911|EMPRESS|RUNE|TENOKE|DODI|FITGIRL|GOG|ELAMIGOS|PROPHET|CPY|STEAMPUNKS|PS4|PS5|XBOX|NSW|SWITCH|UPDATE[._\s\-]?V?\d|DLC|CRACK(?:FIX|ONLY)?|REPACK)(?:$|[._\s\-\]])/i;
+
+            const mediaExtRe = /\.(mkv|mp4|avi|m2ts|ts|vob|mov|wmv|m4v|webm|mpg|mpeg)$/i;
+            const mediaTagRe = /(?:^|[._\s\-\[])(CD\d+|DISC\d+|DVD\d+|S\d{1,3}(?:E\d{1,3})?|SEASON[._\s\-]?\d{1,3}|2160P|1080P|720P|480P|BLURAY|BDRIP|WEB-?DL|WEBRIP|HDTV|REMUX|X264|X265|HEVC|H\.?264|H\.?265|HDR|DOVI|TRUEHD|ATMOS|EAC3|AC3|DTS)(?:$|[._\s\-\]])/i;
+
+            const miscExtRe = /\.(epub|mobi|azw3|pdf|cbz|cbr|mp3|flac|ogg|m4b|aac|wav|exe|msi|dmg|deb|rpm|apk)$/i;
+            const miscTagRe = /(?:^|[._\s\-\[])(EBOOK|AUDIOBOOK|HOERBUCH|MP3|FLAC|320KBPS|PORTABLE|RETAIL|MULTILINGUAL)(?:$|[._\s\-\]])/i;
+
+            const fileIsMedia = mediaExtRe.test(base);
+            const fileIsGame = gameExtRe.test(base);
+            const fileIsMisc = miscExtRe.test(base);
+
+            const nameHasGameTag = gameTagRe.test(base);
+            const nameHasMediaTag = mediaTagRe.test(base);
+            const parentHasMediaTag = mediaTagRe.test(parentDir);
+
+            let detected = '';
+            // Wenn die gewählte Datei eindeutig ein Video-Container (.avi, .mkv, .mp4, ...) ist,
+            // gewinnt movies_series gegenüber einem alten Game-Tag im übergeordneten Ordnernamen
+            // (außer die Datei selbst trägt einen expliziten Game-Tag).
+            if (fileIsMedia && !nameHasGameTag) {
+                detected = 'movies_series';
+            } else if (fileIsGame || nameHasGameTag) {
+                detected = 'games';
+            } else if (nameHasMediaTag || parentHasMediaTag) {
+                detected = 'movies_series';
+            } else if (fileIsMisc || miscTagRe.test(base)) {
+                detected = 'misc';
+            }
+
+            if (detected) {
+                lastAutoTemplatePath = raw;
+                if (tplEl.value !== detected) {
+                    tplEl.value = detected;
+                    if (typeof updateTemplateHint === 'function') updateTemplateHint();
+                    if (typeof autoSaveConfig === 'function') autoSaveConfig();
+                }
+            }
+        }
+
+        let copyFeedbackTimer = null;
+        async function copyPostingTemplate(silentAuto = false) {
+            const areaEl = document.getElementById('postingTemplateArea');
+            const tpl = (areaEl && areaEl.value) ? areaEl.value : (window.__lastPostingTemplate || '');
+            if (!tpl) return;
+
+            const btn = document.getElementById('copyTemplateBtn');
+            const btnText = document.getElementById('copyTemplateBtnText');
+            const isEn = (getValIfExists('appLang', 'de') === 'en');
+            let copied = false;
+
+            if (!silentAuto) {
+                if (btn) btn.disabled = true;
+                try {
+                    const resp = await fetch('/api/clipboard', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: tpl })
+                    });
+                    const res = await resp.json();
+                    copied = Boolean(res && res.status === 'ok');
+                } catch (_) {
+                    copied = false;
+                }
+                if (!copied && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    try {
+                        await navigator.clipboard.writeText(tpl);
+                        copied = true;
+                    } catch (_) {}
+                }
+                if (!copied && areaEl) {
+                    try {
+                        areaEl.focus();
+                        areaEl.select();
+                        copied = Boolean(document.execCommand && document.execCommand('copy'));
+                    } catch (_) {}
+                }
+                if (btn) btn.disabled = false;
+            } else {
+                copied = true;
+            }
+
+            if (areaEl && !silentAuto) {
+                try {
+                    areaEl.focus();
+                    areaEl.select();
+                } catch (_) {}
+            }
+
+            if (copyFeedbackTimer) {
+                clearTimeout(copyFeedbackTimer);
+                copyFeedbackTimer = null;
+            }
+
+            if (btnText) {
+                if (copied) {
+                    btnText.textContent = isEn
+                        ? (silentAuto ? 'Copied to clipboard!' : 'Copied!')
+                        : (silentAuto ? 'In Zwischenablage kopiert!' : 'Kopiert!');
+                } else {
+                    btnText.textContent = isEn ? 'Select manually below' : 'Unten manuell kopieren';
+                }
+                copyFeedbackTimer = setTimeout(() => {
+                    btnText.textContent = isEn ? 'Copy Posting Template' : 'Posting-Vorlage kopieren';
+                    copyFeedbackTimer = null;
+                }, 3500);
+            }
+        }
+
+        let cachedEngines = [];
+        let cachedPar2Engines = [];
+
+        function formatEngineName(eng, isEn) {
+            if (!eng) return '';
+            if (eng.id === 'rar') return 'RAR5';
+            if (eng.id === '7zip') return '7-Zip';
+            if (eng.id === 'native') return isEn ? 'Split only (no password)' : 'Nur splitten (ohne Passwort)';
+            return eng.name || '';
+        }
+
+        function formatPar2EngineName(pe, isEn) {
+            if (!pe) return '';
+            if (pe.id === 'parpar') return 'ParPar';
+            if (pe.id === 'turbo') return 'par2cmdline';
+            const isMissing = !pe.path;
+            if (isMissing) return isEn ? 'Not found' : 'Nicht gefunden';
+            return pe.name || '';
+        }
+
+        function renderEngineSelects(lang) {
+            const isEn = (String(lang || 'de').toLowerCase() === 'en');
+            const engSelect = document.getElementById('engine');
+            if (engSelect && cachedEngines.length > 0) {
+                const prevEng = engSelect.value;
+                engSelect.innerHTML = '';
+                cachedEngines.forEach(eng => {
+                    const opt = document.createElement('option');
+                    opt.value = eng.id;
+                    opt.textContent = formatEngineName(eng, isEn);
+                    if (prevEng) opt.selected = (eng.id === prevEng);
+                    else if (eng.default) opt.selected = true;
+                    engSelect.appendChild(opt);
+                });
+            }
+            const parSelect = document.getElementById('par2Engine');
+            if (parSelect && cachedPar2Engines.length > 0) {
+                const prevPar = parSelect.value;
+                parSelect.innerHTML = '';
+                cachedPar2Engines.forEach(pe => {
+                    const opt = document.createElement('option');
+                    opt.value = pe.id;
+                    opt.textContent = formatPar2EngineName(pe, isEn);
+                    if (prevPar) opt.selected = (pe.id === prevPar);
+                    else if (pe.default) opt.selected = true;
+                    parSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function applyLanguage(lang) {
+            renderSystemSetupBanner();
+            const isEn = (String(lang || 'de').toLowerCase() === 'en');
+            const setText = (id, en, de) => { const el = document.getElementById(id); if (el) el.textContent = isEn ? en : de; };
+            const setPh = (id, en, de) => { const el = document.getElementById(id); if (el) el.placeholder = isEn ? en : de; };
+
+            setText('quitBtn', 'Quit', 'Beenden');
+
+            const cardHeaders = document.querySelectorAll('.card > h2');
+            if (cardHeaders[0]) cardHeaders[0].textContent = isEn ? '1. Newsserver & Connection (NNTP)' : '1. Newsserver & Verbindung (NNTP)';
+            if (cardHeaders[1]) cardHeaders[1].textContent = isEn ? '2. File Packaging & Upload' : '2. Datei-Paketierung & Upload';
+            if (cardHeaders[2]) cardHeaders[2].textContent = isEn ? '3. Live Telemetry & Log' : '3. Live-Telemetrie & Protokoll';
+
+            const lblMap = {
+                host: ['NNTP Host', 'NNTP Host'],
+                port: ['Port (563 / 443 = SSL, 119 = Plain)', 'Port (563 / 443 = SSL, 119 = Klartext)'],
+                connections: ['Parallel Connections', 'Parallele Verbindungen'],
+                username: ['Username', 'Benutzername'],
+                passwordServer: ['Password (AES-256 encrypted)', 'Passwort (AES-256 verschlüsselt)'],
+                newsgroup: ['Target Newsgroups (separated by , or ;)', 'Ziel-Newsgroups (getrennt per , oder ;)'],
+                poster: ['From / Poster Header', 'From / Poster Header'],
+                randomizePoster: ['Generate random From header per upload', 'Zufälligen From-Header pro Upload generieren'],
+                onlineMetadata: ['Search cover & description online (TMDB, TVMaze, DuckDuckGo)', 'Cover & Beschreibung online suchen (TMDB, TVMaze, DuckDuckGo)'],
+                createTemplate: ['Create posting template (.txt)', 'Posting-Vorlage (.txt) erstellen'],
+                existingPassword: ['Existing archive password (optional)', 'Vorhandenes Archiv-Passwort (optional)'],
+                sourcePath: ['Source Path (Single file or folder)', 'Quellpfad (Einzeldatei oder Ordner)'],
+                nfoPath: ['NFO File (Optional)', 'NFO-Datei (Optional)'],
+                nzbOutDir: ['Output Folder for .nzb & .txt', 'Ausgabeordner für .nzb & .txt'],
+                engine: ['Archive Engine', 'Archiv-Engine'],
+                partSize: ['Part Size (MB)', 'Part-Größe (MB)'],
+                par2Engine: ['PAR2 Engine', 'PAR2-Engine'],
+                par2Pct: ['PAR2 Redundancy (%)', 'PAR2 Redundanz (%)'],
+                autoPassword: ['Generate random archive password', 'Zufälliges Archiv-Passwort generieren'],
+                archivePassword: ['Manual Password', 'Manuelles Passwort'],
+                passwordLength: ['Password Length (chars)', 'Passwort-Länge (Zeichen)'],
+                obfuscate: ['Obfuscate filenames & subject headers', 'Dateinamen & Subject-Header verschleiern'],
+                obfuscationLength: ['Random Name / Header Length (chars)', 'Zufallsnamen- / Header-Länge (Zeichen)'],
+                par2Enabled: ['Create PAR2 recovery files', 'PAR2-Wiederherstellungsdateien erstellen'],
+                templateType: ['Posting Template', 'Vorlage'],
+                                            };
+            for (const [id, pair] of Object.entries(lblMap)) {
+                const el = document.querySelector(`label[for="${id}"]`);
+                if (el) el.textContent = isEn ? pair[0] : pair[1];
+            }
+
+            setPh('sourcePath', 'Select path...', 'Pfad wählen...');
+            setPh('nfoPath', 'Auto-detect from source folder', 'Auto-Erkennung aus Quellordner');
+            setPh('nzbOutDir', 'Empty = same folder as source', 'Leer = gleicher Ordner wie Quelle');
+            setPh('archivePassword', 'Empty = unencrypted', 'Leer = unverschlüsselt');
+            setPh('existingPassword', 'Empty = no password', 'Leer = kein Passwort');
+            setText('existingPwdNote', 'For archives you already encrypted: goes into the NZB (and the template) so SABnzbd/NZBGet can unpack automatically. Not saved.',
+                'Für bereits verschlüsselte Archive: landet in der NZB (und in der Vorlage), damit SABnzbd/NZBGet automatisch entpacken. Wird nicht gespeichert.');
+
+            setText('btnBrowseFile', 'File...', 'Datei...');
+            setText('btnBrowseFolder', 'Folder...', 'Ordner...');
+            setText('btnBrowseNfo', 'NFO...', 'NFO...');
+            setText('btnBrowseNzbDir', 'Folder...', 'Ordner...');
+
+            setText('nativePwdNote', 'Native Go splitting does not support passwords (use RAR5 or 7-Zip).', 'Natives Go-Splitting unterstützt kein Passwort (bitte RAR5 oder 7-Zip nutzen).');
+            setText('nativeObfNote', 'PAR2 rename active: original filename & extension are restored on extraction.', 'PAR2-Rename aktiv: Original-Dateiname & Endung bleiben beim Entpacken erhalten.');
+            renderEngineSelects(lang);
+            const tplSel = document.getElementById('templateType');
+            if (tplSel) {
+                for (const opt of tplSel.options) {
+                    if (opt.value === 'movies_series') opt.textContent = isEn ? 'Movies / TV' : 'Filme / Serien';
+                    else if (opt.value === 'games') opt.textContent = isEn ? 'Games (PC / Console)' : 'Games (PC / Konsole)';
+                    else if (opt.value === 'misc') opt.textContent = isEn ? 'Misc (E-Book, Software, Audio)' : 'Misc (E-Book, Software, Audio)';
+                }
+            }
+            updateTemplateHint();
+
+            updatePortHint();
+
+
+            setText('testConnBtn', 'Test Connection & Limit', 'Verbindung & Limit testen');
+            setText('shutdownTitle', 'Usenet GoUp was closed cleanly', 'Usenet GoUp wurde sauber beendet');
+            setText('shutdownText', 'Temporary files were cleaned up and the background process was stopped. You can close this browser tab now.',
+                'Temporäre Dateien wurden aufgeräumt und der Hintergrundprozess beendet. Du kannst dieses Browser-Tab jetzt schließen.');
+            const tips = {
+                appLang: ['Language for interface, log and template', 'Sprache für Oberfläche, Log und Vorlage'],
+                quitBtn: ['Clean up temp folder and stop the background server', 'Temp-Ordner aufräumen und Hintergrundserver sauber beenden'],
+                btnBrowseFile: ['Select a single file', 'Einzelne Datei auswählen'],
+                btnBrowseFolder: ['Select a whole folder', 'Ganzen Ordner auswählen'],
+                btnBrowseNfo: ['Select NFO file manually', 'NFO-Datei manuell auswählen'],
+                btnBrowseNzbDir: ['Choose output folder for NZB & TXT', 'Zielordner für NZB & TXT wählen'],
+                clearCacheBtn: ['Delete the cached dry-run package and pack again on the next upload', 'Gecachtes Dry-Run-Paket löschen und beim nächsten Upload neu verpacken'],
+                cancelBtn: ['Cancel the running job (packer, PAR2 and upload are stopped)', 'Laufenden Job abbrechen (Packer/PAR2/Upload werden beendet)'],
+            };
+            for (const [id, pair] of Object.entries(tips)) {
+                const el = document.getElementById(id);
+                if (el) el.title = isEn ? pair[0] : pair[1];
+            }
+            setText('clearCacheBtn', 'Discard Cache', 'Cache verwerfen');
+            updateModeUI();
+            setText('cancelBtn', 'Cancel', 'Abbrechen');
+            setText('copyTemplateBtnText', 'Copy Posting Template', 'Posting-Vorlage kopieren');
+
+            const phaseEl = document.getElementById('phaseLabel');
+            if (phaseEl && (phaseEl.textContent === 'Bereit' || phaseEl.textContent === 'Ready')) {
+                phaseEl.textContent = isEn ? 'Ready' : 'Bereit';
+            }
+            setText('lblCol1', 'Gross Rate (Line)', 'Brutto-Rate (Leitung)');
+            setText('lblCol2', 'Net Rate (File)', 'Netto-Rate (Datei)');
+            setText('subCol2', 'Pure payload', 'Reine Nutzdaten');
+            setText('lblCol3', 'Segments', 'Segmente');
+            setText('lblCol4', 'Transferred', 'Übertragen');
+
+            const mMbits = document.getElementById('mMbits');
+            if (mMbits) {
+                mMbits.textContent = isEn
+                    ? mMbits.textContent.replace('(inkl. yEnc)', '(incl. yEnc)')
+                    : mMbits.textContent.replace('(incl. yEnc)', '(inkl. yEnc)');
+            }
+            const mTot = document.getElementById('mTotalData');
+            if (mTot) {
+                mTot.textContent = isEn
+                    ? mTot.textContent.replace(/^von /, 'of ')
+                    : mTot.textContent.replace(/^of /, 'von ');
+            }
+
+            setText('initialLogLine', 'System ready.', 'System bereit.');
+
+            const coverImg = document.getElementById('coverPreviewImg');
+            if (coverImg) coverImg.alt = isEn ? 'Detected cover' : 'Erkanntes Cover';
+            const badge = document.getElementById('coverPreviewBadge');
+            if (badge && badge.textContent) {
+                badge.textContent = isEn ? 'DETECTED BOARD COVER' : 'ERKANNTES BOARD-COVER';
+            }
+        }
+
+        function collectAppConfig() {
+            const isNative = document.getElementById('engine').value === 'native';
+            return {
+                host: document.getElementById('host').value.trim(),
+                port: parseInt(document.getElementById('port').value, 10) || 563,
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('passwordServer').value,
+                connections: parseInt(document.getElementById('connections').value, 10) || 40,
+                newsgroup: document.getElementById('newsgroup').value.trim(),
+                poster: document.getElementById('poster').value.trim(),
+                randomizePoster: document.getElementById('randomizePoster').checked,
+                maxRetries: 3,
+                nzbOutDir: document.getElementById('nzbOutDir').value.trim(),
+                uploadMode: currentUploadMode(),
+                par2Disabled: currentUploadMode() === 'direct' && !document.getElementById('par2Enabled').checked,
+                engine: document.getElementById('engine').value,
+                partSizeMB: parseInt(document.getElementById('partSize').value, 10) || 50,
+                par2Engine: document.getElementById('par2Engine').value,
+                par2Pct: parseInt(document.getElementById('par2Pct').value, 10) || 0,
+                autoPassword: isNative ? false : document.getElementById('autoPassword').checked,
+                passwordLength: parseInt(document.getElementById('passwordLength').value, 10) || 24,
+                archivePassword: isNative ? '' : document.getElementById('archivePassword').value,
+                obfuscate: document.getElementById('obfuscate').checked,
+                obfuscationLength: parseInt(document.getElementById('obfuscationLength').value, 10) || 24,
+                includeMediaInfo: normalizeTemplateVal(getValIfExists('templateType', 'movies_series')) === 'movies_series',
+                onlineMetadata: normalizeTemplateVal(getValIfExists('templateType', 'movies_series')) === 'movies_series' && document.getElementById('onlineMetadata').checked,
+                noPostingTemplate: !document.getElementById('createTemplate').checked,
+                language: getValIfExists('appLang', 'de'),
+                templateType: normalizeTemplateVal(getValIfExists('templateType', 'movies_series'))
+            };
+        }
+
+        let lastSavedJSON = '';
+        async function autoSaveConfig() {
+            const cfg = collectAppConfig();
+            const currentJSON = JSON.stringify(cfg);
+            if (currentJSON === lastSavedJSON) return;
+            lastSavedJSON = currentJSON;
+            try {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: currentJSON
+                });
+            } catch (_) {}
+        }
+
+        function bindEventListeners() {
+            document.querySelectorAll('.autosave').forEach(el => {
+                el.addEventListener('blur', autoSaveConfig);
+                el.addEventListener('change', autoSaveConfig);
+            });
+            document.querySelectorAll('.pack-param').forEach(el => {
+                el.addEventListener('change', () => invalidateDryRunCache(false));
+                el.addEventListener('input', () => invalidateDryRunCache(false));
+            });
+        }
+
+        let dialogOpen = false;
+        async function browseNative(mode, btnEl) {
+            if (dialogOpen) return;
+            dialogOpen = true;
+            const origText = btnEl ? btnEl.textContent : '';
+            if (btnEl) {
+                btnEl.textContent = (getValIfExists('appLang', 'de') === 'en') ? 'Choosing...' : 'Wähle...';
+                btnEl.style.opacity = '0.7';
+            }
+            try {
+                const lang = getValIfExists('appLang', 'de') === 'en' ? 'en' : 'de';
+                const res = await fetch('/api/browse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode, lang })
+                });
+                const data = await res.json();
+                if (data.path) {
+                    if (mode === 'nzbdir') {
+                        document.getElementById('nzbOutDir').value = data.path;
+                        autoSaveConfig();
+                    } else if (mode === 'nfo') {
+                        document.getElementById('nfoPath').value = data.path;
+                    } else {
+                        document.getElementById('sourcePath').value = data.path;
+                        resetPreviousResultBanner();
+                        autoSelectTemplateFromPath(true);
+                        invalidateDryRunCache(false);
+                    }
+                }
+            } catch (err) {
+                appendLog(`Dialog-Fehler: ${err}`, `Dialog error: ${err}`);
+                reportClientDiag('DIALOG-FETCH-ERROR', err);
+            } finally {
+                dialogOpen = false;
+                if (btnEl) {
+                    btnEl.textContent = origText;
+                    btnEl.style.opacity = '1';
+                }
+            }
+        }
+
+        function formatConnNote(data, isEn) {
+            if (!isEn) return data.connNote || '';
+            if (data.maxConns >= data.reqConns) {
+                return `All ${data.reqConns} requested connections accepted.`;
+            }
+            return `Provider allows at most ${data.maxConns} of ${data.reqConns} requested connections.`;
+        }
+
+        async function testServerConnection() {
+            const btn = document.getElementById('testConnBtn');
+            const box = document.getElementById('testResultBox');
+            const isEn = (getValIfExists('appLang', 'de') === 'en');
+            btn.disabled = true;
+            btn.textContent = isEn ? 'Testing...' : 'Teste...';
+            box.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/test-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(collectAppConfig())
+                });
+                const data = await res.json();
+                box.style.display = 'block';
+                if (data.success) {
+                    const limited = data.maxConns < data.reqConns;
+                    const tlsText = data.tls
+                        ? (isEn ? 'SSL/TLS active' : 'SSL/TLS aktiv')
+                        : (isEn ? 'Plaintext' : 'Klartext');
+                    const noteText = formatConnNote(data, isEn);
+                    if (!data.postingOK) {
+                        box.className = 'test-status test-err';
+                        const prefix = isEn ? 'NO POSTING PERMISSION!' : 'KEIN POSTING-RECHT!';
+                        box.textContent = isEn
+                            ? `${prefix} Connected (${data.latencyMs} ms | ${tlsText}) — ${noteText}`
+                            : `${prefix} Verbunden (${data.latencyMs} ms | ${tlsText}) — ${noteText}`;
+                    } else {
+                        box.className = limited ? 'test-status test-warn' : 'test-status test-ok';
+                        const postText = isEn ? 'Posting allowed' : 'Posting erlaubt';
+                        box.textContent = isEn
+                            ? `Connected (${data.latencyMs} ms | ${tlsText} | ${postText}) — ${noteText}`
+                            : `Verbunden (${data.latencyMs} ms | ${tlsText} | ${postText}) — ${noteText}`;
+                    }
+                    appendLog(`Verbindungstest: ${formatConnNote(data, false)} (${data.greeting})`,
+                        `Connection test: ${formatConnNote(data, true)} (${data.greeting})`);
+                } else {
+                    box.className = 'test-status test-err';
+                    let errMsg = (isEn && data.errorEn) ? data.errorEn : (data.error || '');
+                    if (isEn) {
+                        const mDns = errMsg.match(/dial tcp: lookup ([^:]+): no such host/i);
+                        if (mDns) {
+                            errMsg = `DNS lookup for '${mDns[1]}' failed (host not found)`;
+                        }
+                    }
+                    box.textContent = (isEn ? 'Connection error: ' : 'Verbindungsfehler: ') + errMsg;
+                    appendLog(`Verbindungstest FEHLGESCHLAGEN: ${data.error}`, `Connection test FAILED: ${data.errorEn || data.error}`);
+                }
+            } catch (err) {
+                box.style.display = 'block';
+                box.className = 'test-status test-err';
+                box.textContent = (isEn ? 'Request error: ' : 'Anfragefehler: ') + err;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = isEn ? 'Test Connection & Limit' : 'Verbindung & Limit testen';
+            }
+        }
+
+        let lastSetupState = null;
+
+        function renderSystemSetupBanner() {
+            if (!lastSetupState) return;
+            const { sys, hasPacker, hasPar2 } = lastSetupState;
+            const banner = document.getElementById('setupBanner');
+            const titleEl = document.getElementById('setupTitle');
+            const introEl = document.getElementById('setupIntro');
+            const list = document.getElementById('setupList');
+            if (!banner || !list) return;
+
+            if (hasPacker && hasPar2) {
+                banner.style.display = 'none';
+                return;
+            }
+
+            const isEn = (getValIfExists('appLang', 'de') === 'en');
+            list.innerHTML = '';
+            if (titleEl) {
+                titleEl.textContent = isEn
+                    ? 'First-Time Setup: Recommended Helper Tools Missing'
+                    : 'Erstinstallation: Empfohlene Hilfsprogramme fehlen noch';
+            }
+            if (introEl) {
+                // Ordnerpfad als Text einsetzen: ein Ordnername mit < oder & darf kein HTML werden.
+                const appDir = String(sys.appDir || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                introEl.innerHTML = isEn
+                    ? `For encrypted multi-volume archives and PAR2 recovery files, place the missing CLI tools into the application folder (<code>${appDir}</code>) or install them system-wide:`
+                    : `Für verschlüsselte Multi-Volume-Archive und PAR2-Reparaturdateien einfach die fehlenden CLI-Tools in den Programmordner (<code>${appDir}</code>) legen oder systemweit installieren:`;
+            }
+
+            if (!hasPacker) {
+                const li = document.createElement('li');
+                if (sys.os === 'windows') {
+                    li.innerHTML = isEn
+                        ? `<strong>Archive packer missing (for password protection & folders):</strong> <a href="https://www.7-zip.org/download.html" target="_blank">7-Zip</a> (<code>7z.exe</code> + <code>7z.dll</code>) or <a href="https://www.rarlab.com/download.htm" target="_blank">WinRAR / RAR CLI</a> (<code>Rar.exe</code>)`
+                        : `<strong>Archiv-Packer fehlt (für Passwortschutz & Ordner):</strong> <a href="https://www.7-zip.org/download.html" target="_blank">7-Zip</a> (<code>7z.exe</code> + <code>7z.dll</code>) oder <a href="https://www.rarlab.com/download.htm" target="_blank">WinRAR / RAR CLI</a> (<code>Rar.exe</code>)`;
+                } else if (sys.os === 'darwin') {
+                    li.innerHTML = isEn
+                        ? `<strong>Archive packer missing:</strong> <code>brew install sevenzip</code> (7-Zip) or <a href="https://www.rarlab.com/download.htm" target="_blank">RAR CLI for macOS</a>`
+                        : `<strong>Archiv-Packer fehlt:</strong> <code>brew install sevenzip</code> (7-Zip) oder <a href="https://www.rarlab.com/download.htm" target="_blank">RAR CLI für macOS</a>`;
+                } else {
+                    li.innerHTML = isEn
+                        ? `<strong>Archive packer missing:</strong> <code>sudo apt install 7zip</code> (or <code>p7zip-full</code>) or <a href="https://www.rarlab.com/download.htm" target="_blank">RAR CLI for Linux</a>`
+                        : `<strong>Archiv-Packer fehlt:</strong> <code>sudo apt install 7zip</code> (oder <code>p7zip-full</code>) bzw. <a href="https://www.rarlab.com/download.htm" target="_blank">RAR CLI für Linux</a>`;
+                }
+                list.appendChild(li);
+            }
+
+            if (!hasPar2) {
+                const li = document.createElement('li');
+                if (sys.os === 'windows') {
+                    li.innerHTML = isEn
+                        ? `<strong>PAR2 engine missing (for recovery files):</strong> <a href="https://github.com/animetosho/ParPar/releases" target="_blank">ParPar Releases</a> (download <code>parpar.exe</code> and place it in the application folder)`
+                        : `<strong>PAR2-Engine fehlt (für Reparaturdateien):</strong> <a href="https://github.com/animetosho/ParPar/releases" target="_blank">ParPar Releases</a> (<code>parpar.exe</code> herunterladen und in den Programmordner legen)`;
+                } else if (sys.os === 'darwin') {
+                    li.innerHTML = isEn
+                        ? `<strong>PAR2 engine missing:</strong> <a href="https://github.com/animetosho/ParPar/releases" target="_blank">ParPar Releases</a> or <code>brew install par2</code>`
+                        : `<strong>PAR2-Engine fehlt:</strong> <a href="https://github.com/animetosho/ParPar/releases" target="_blank">ParPar Releases</a> oder <code>brew install par2</code>`;
+                } else {
+                    li.innerHTML = isEn
+                        ? `<strong>PAR2 engine missing:</strong> <a href="https://github.com/animetosho/ParPar/releases" target="_blank">ParPar Releases</a> or <code>sudo apt install par2</code>`
+                        : `<strong>PAR2-Engine fehlt:</strong> <a href="https://github.com/animetosho/ParPar/releases" target="_blank">ParPar Releases</a> oder <code>sudo apt install par2</code>`;
+                }
+                list.appendChild(li);
+            }
+
+            banner.style.display = 'block';
+        }
+
+        async function checkSystemSetup(engines, parEngines, sysInfo) {
+            try {
+                const sys = sysInfo || await (await fetch('/api/system-info')).json();
+                const hasPacker = engines.some(e => e.id === 'rar' || e.id === '7zip');
+                const hasPar2 = parEngines.some(p => p.id === 'parpar' || p.id === 'turbo');
+                lastSetupState = { sys, hasPacker, hasPar2 };
+                renderSystemSetupBanner();
+            } catch (_) {}
+        }
+
+        async function init() {
+            let sysInfo = null;
+            try {
+                const sysRes = await fetch('/api/system-info');
+                sysInfo = await sysRes.json();
+                if (sysInfo.version) {
+                    document.getElementById('appVersion').textContent = sysInfo.version;
+                }
+            } catch (_) {}
+
+            const engRes = await fetch('/api/engines');
+            const engines = await engRes.json();
+            cachedEngines = engines;
+
+            const parRes = await fetch('/api/par2-engines');
+            const parEngines = await parRes.json();
+            cachedPar2Engines = parEngines;
+
+            const initialLang = document.getElementById('appLang')?.value || ((navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en');
+            renderEngineSelects(initialLang);
+
+            await checkSystemSetup(engines, parEngines, sysInfo);
+
+            const cfgRes = await fetch('/api/config');
+            if (cfgRes.ok) {
+                const cfg = await cfgRes.json();
+                if (cfg.host) document.getElementById('host').value = cfg.host;
+                if (cfg.port) document.getElementById('port').value = cfg.port;
+                if (cfg.connections) document.getElementById('connections').value = cfg.connections;
+                if (cfg.username) document.getElementById('username').value = cfg.username;
+                if (cfg.password) document.getElementById('passwordServer').value = cfg.password;
+                if (cfg.newsgroup) document.getElementById('newsgroup').value = cfg.newsgroup;
+                if (cfg.poster) document.getElementById('poster').value = cfg.poster;
+                document.getElementById('randomizePoster').checked = cfg.randomizePoster !== false;
+
+                if (cfg.nzbOutDir !== undefined) document.getElementById('nzbOutDir').value = cfg.nzbOutDir;
+                setValIfExists('uploadMode', cfg.uploadMode === 'direct' ? 'direct' : 'pack');
+                document.getElementById('par2Enabled').checked = cfg.par2Disabled !== true;
+                const engSel = document.getElementById('engine');
+                const availableEngIds = [...engSel.options].map(o => o.value);
+                const bestExternalEng = availableEngIds.find(v => v === 'rar') || availableEngIds.find(v => v === '7zip');
+                if (cfg.engine && availableEngIds.includes(cfg.engine)) {
+                    // Falls zuvor nur 'native' verfügbar war und jetzt RAR/7-Zip installiert ist, automatisch auf den externen Packer wechseln
+                    if (cfg.engine === 'native' && bestExternalEng) {
+                        engSel.value = bestExternalEng;
+                    } else {
+                        engSel.value = cfg.engine;
+                    }
+                } else if (bestExternalEng) {
+                    engSel.value = bestExternalEng;
+                }
+                if (cfg.partSizeMB) document.getElementById('partSize').value = cfg.partSizeMB;
+                if (cfg.par2Engine) {
+                    const pSel = document.getElementById('par2Engine');
+                    const hasSaved = [...pSel.options].some(o => o.value === cfg.par2Engine);
+                    const hasParPar = [...pSel.options].some(o => o.value === 'parpar');
+                    if (cfg.par2Engine === 'auto' && hasParPar) {
+                        pSel.value = 'parpar';
+                    } else if (hasSaved) {
+                        pSel.value = cfg.par2Engine;
+                    }
+                }
+                if (typeof toggleEngineMode === 'function') toggleEngineMode();
+                if (cfg.par2Pct !== undefined) document.getElementById('par2Pct').value = cfg.par2Pct;
+                if (cfg.autoPassword !== undefined) document.getElementById('autoPassword').checked = cfg.autoPassword;
+                if (cfg.passwordLength) document.getElementById('passwordLength').value = cfg.passwordLength;
+                if (cfg.archivePassword !== undefined) document.getElementById('archivePassword').value = cfg.archivePassword;
+                if (cfg.obfuscate !== undefined) document.getElementById('obfuscate').checked = cfg.obfuscate;
+                if (cfg.obfuscationLength) document.getElementById('obfuscationLength').value = cfg.obfuscationLength;
+                setValIfExists('templateType', normalizeTemplateVal(cfg.templateType));
+                document.getElementById('onlineMetadata').checked = cfg.onlineMetadata === true;
+                document.getElementById('createTemplate').checked = cfg.noPostingTemplate !== true;
+                if (cfg.language) { setValIfExists('appLang', cfg.language); applyLanguage(cfg.language); }
+                updateTemplateHint();
+            }
+            updatePortHint();
+            togglePosterMode();
+            toggleEngineMode();
+            toggleObfuscateMode();
+            
+            updateTemplateHint();
+            lastSavedJSON = JSON.stringify(collectAppConfig());
+            bindEventListeners();
+        }
+
+        async function startPipeline(dryRun) {
+            const sourcePath = document.getElementById('sourcePath').value.trim();
+            if (!sourcePath) {
+                alert(getValIfExists('appLang', 'de') === 'en' ? 'Please select or enter a source path.' : 'Bitte einen Quellpfad auswählen oder angeben.');
+                return;
+            }
+            const btn1 = document.getElementById('startBtn');
+            const btn2 = document.getElementById('packOnlyBtn');
+            btn1.disabled = true;
+            btn2.disabled = true;
+            document.getElementById('cancelBtn').style.display = 'inline-block';
+            resetPreviousResultBanner();
+            document.getElementById('progressBar').style.width = '0%';
+
+            const cfg = collectAppConfig();
+            const payload = {
+                dryRun: dryRun,
+                server: cfg,
+                sourcePath: sourcePath,
+                nfoPath: document.getElementById('nfoPath').value.trim(),
+                nzbOutDir: cfg.nzbOutDir,
+                uploadMode: cfg.uploadMode,
+                par2Disabled: cfg.par2Disabled,
+                engine: cfg.engine,
+                partSizeMB: cfg.partSizeMB,
+                par2Engine: cfg.par2Engine,
+                par2Pct: cfg.par2Pct,
+                autoPassword: cfg.autoPassword,
+                passwordLength: cfg.passwordLength,
+                archivePassword: cfg.archivePassword,
+                obfuscate: cfg.obfuscate,
+                obfuscationLength: cfg.obfuscationLength,
+                includeMediaInfo: Boolean(cfg.includeMediaInfo),
+                onlineMetadata: Boolean(cfg.onlineMetadata),
+                noPostingTemplate: Boolean(cfg.noPostingTemplate),
+                existingPassword: cfg.uploadMode === 'direct' ? getValIfExists('existingPassword', '').trim() : '',
+                language: cfg.language || 'de',
+                templateType: normalizeTemplateVal(cfg.templateType)
+            };
+
+            try {
+                const res = await fetch('/api/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    appendLog(`FEHLER: ${data.error}`, `ERROR: ${data.errorEn || data.error}`);
+                    setDryRunButtonState(false, 0);
+                } else if (data.status === 'dryrun_ok') {
+                    setDryRunButtonState(true, data.fileCount || 0);
+                } else if (data.status === 'ok') {
+                    setDryRunButtonState(false, 0);
+                    if (data.verifyMissing > 0) {
+                        const en = getValIfExists('appLang', 'de') === 'en';
+                        alert(en
+                            ? `Warning: ${data.verifyMissing} parts are missing on the server. The package was kept, see log.`
+                            : `Warnung: ${data.verifyMissing} Teile fehlen auf dem Server. Das Paket bleibt erhalten, siehe Log.`);
+                    }
+                    const strip = document.getElementById('coverPreviewStrip');
+                    const img = document.getElementById('coverPreviewImg');
+                    const urlTxt = document.getElementById('coverPreviewUrl');
+                    const badge = document.getElementById('coverPreviewBadge');
+                    const copyBox = document.getElementById('templateCopyBox');
+
+                    if (data.coverPreview && /^https:\/\//i.test(data.coverPreview)) {
+                        img.src = data.coverPreview;
+                        img.style.display = 'block';
+                        badge.textContent = (getValIfExists('appLang', 'de') === 'en') ? 'DETECTED BOARD COVER' : 'ERKANNTES BOARD-COVER';
+                        urlTxt.textContent = data.coverPreview;
+                        strip.style.display = 'flex';
+                    }
+                    if (data.postingTemplate) {
+                        window.__lastPostingTemplate = data.postingTemplate;
+                        const tplArea = document.getElementById('postingTemplateArea');
+                        const tplPanel = document.getElementById('postingTemplatePanel');
+                        if (tplArea) tplArea.value = data.postingTemplate;
+                        if (tplPanel) tplPanel.style.display = 'block';
+                        copyBox.style.display = 'flex';
+                        if (!data.coverPreview) {
+                            img.style.display = 'none';
+                            badge.textContent = (getValIfExists('appLang', 'de') === 'en') ? 'POSTING TEMPLATE READY' : 'POSTING-VORLAGE BEREIT';
+                            urlTxt.textContent = data.txtPath || '';
+                            strip.style.display = 'flex';
+                        }
+                        copyPostingTemplate(true);
+                    }
+                }
+            } catch (err) {
+                appendLog(`Verbindungsfehler: ${err}`, `Connection error: ${err}`);
+                reportClientDiag('RUN-FETCH-ERROR', err);
+            } finally {
+                btn1.disabled = false;
+                btn2.disabled = false;
+                document.getElementById('cancelBtn').style.display = 'none';
+            }
+        }
+
+        async function cancelPipeline() {
+            const btn = document.getElementById('cancelBtn');
+            btn.disabled = true;
+            try {
+                await fetch('/api/cancel', { method: 'POST' });
+            } catch (_) {
+            } finally {
+                setTimeout(() => { btn.disabled = false; }, 1500);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
